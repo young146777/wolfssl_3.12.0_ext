@@ -4737,6 +4737,47 @@ static int TLSX_SetSignatureAlgorithms(TLSX** extensions, const void* data,
 
 
 /******************************************************************************/
+/* Certificate Compression                                                    */
+/******************************************************************************/
+
+/* Return the size of the SignatureAlgorithms extension's data.
+ *
+ * data  Unused
+ * returns the length of data that will be in the extension.
+ */
+
+static word16 TLSX_CertificateCompression_GetSize(void* data)
+{
+    WOLFSSL* ssl = (WOLFSSL*)data;
+
+    return OPAQUE16_LEN + ssl->certificateCompression->certCompAlgoSz;
+}
+
+//YH TODO: Fill it !!
+
+static word16 TLSX_CertificateCompression_Write(void* data, byte* output)
+{
+    word16 offset = OPAQUE8_LEN; 
+
+    c16toa(ssl->certificateCompression->certCompAlgoSz, output);
+    XMEMCPY(output + OPAQUE16_LEN, ssl->certificateCompression->certCompAlgo,
+            ssl->certificateCompression->certCompAlgoSz);
+
+    return OPAQUE16_LEN + ssl->certificateCompression->certCompAlgoSz;
+}
+
+
+#define CC_GET_SIZE  TLSX_CertificateCompression_GetSize
+#define CC_WRITE     TLSX_CertificateCompression_Write
+#define CC_PARSE     TLSX_CertificateCompression_Parse
+
+
+
+
+
+
+
+/******************************************************************************/
 /* Key Share                                                                  */
 /******************************************************************************/
 
@@ -6847,6 +6888,9 @@ void TLSX_FreeAll(TLSX* list, void* heap)
             case TLSX_SIGNATURE_ALGORITHMS:
                 break;
 
+            case TLSX_CERTIFICATE_COMPRESSION: //YH TODO: Does it need to free?
+                break;
+
 #ifdef WOLFSSL_TLS13
             case TLSX_SUPPORTED_VERSIONS:
                 break;
@@ -6967,6 +7011,9 @@ static word16 TLSX_GetSize(TLSX* list, byte* semaphore, byte msgType)
                 length += SA_GET_SIZE(extension->data);
                 break;
 
+            case TLSX_CERTICATE_COMPRESSION:	/* YH TODO: make CC_GET_SIZE */
+                length += CC_GET_SIZE((CertificateCompression*)extension->data);
+                break;
 #ifdef WOLFSSL_TLS13
             case TLSX_SUPPORTED_VERSIONS:
                 length += SV_GET_SIZE(extension->data);
@@ -7105,6 +7152,12 @@ static word16 TLSX_Write(TLSX* list, byte* output, byte* semaphore,
             case TLSX_SIGNATURE_ALGORITHMS:
                 WOLFSSL_MSG("Signature Algorithms extension to write");
                 offset += SA_WRITE(extension->data, output + offset);
+                break;
+
+            /* YH TODO: make CC_WRITE */
+            case TLSX_CERTIFICATE_COMPRESSION:
+                WOLFSSL_MSG("Certificate Compression extension to write");
+                offset += CC_WRITE((CertificateCompression*)extension->data, output + offset);
                 break;
 
 #ifdef WOLFSSL_TLS13

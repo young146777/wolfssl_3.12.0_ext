@@ -996,6 +996,7 @@ static int dtls_export_load(WOLFSSL* ssl, byte* exp, word32 len, byte ver)
     options->closeNotify      = exp[idx++];
     options->sentNotify       = exp[idx++];
     options->usingCompression = exp[idx++];
+    options->usingCertComp    = exp[idx++];  //YH
     options->haveRSA          = exp[idx++];
     options->haveECC          = exp[idx++];
     options->haveDH           = exp[idx++];
@@ -1749,6 +1750,17 @@ void InitCipherSpecs(CipherSpecs* cs)
     cs->block_size  = 0;
 }
 
+void InitCertificateCompression(CertificateCompression* certificateCompression) {
+    int idx = 0;
+    #ifdef HAVE_LIBZ
+    certificateCompression->certCompAlgo[idx++] = zlib;
+    #endif
+    #ifdef HAVE_BROTLI
+    certificateCompression->certCompAlgo[idx++] = brotli;
+    #endif
+    certificateCompression->certCompAlgoSz = (word16)idx;
+}
+    
 void InitSuitesHashSigAlgo(Suites* suites, int haveECDSAsig, int haveRSAsig,
                            int haveAnon, int tls1_2, int keySz)
 {

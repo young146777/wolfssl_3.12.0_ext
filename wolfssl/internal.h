@@ -174,6 +174,11 @@
     #include "zlib.h"
 #endif
 
+/* YH */
+#ifdef HAVE_BROTLI
+    #include "brotli.h"
+#endif
+
 #ifdef WOLFSSL_ASYNC_CRYPT
     #include <wolfssl/wolfcrypt/async.h>
 #endif
@@ -958,6 +963,7 @@ enum Misc {
     INVALID_BYTE    = 0xff,     /* Used to initialize cipher specs values */
     NO_COMPRESSION  =  0,
     ZLIB_COMPRESSION = 221,     /* wolfSSL zlib compression */
+    BROTLI_COMPRESSION = 222,   /* YH brotli compression */
     HELLO_EXT_SIG_ALGO = 13,    /* ID for the sig_algo hello extension */
     HELLO_EXT_EXTMS = 0x0017,   /* ID for the extended master secret ext */
     SECRET_LEN      = 48,       /* pre RSA and all master */
@@ -1019,6 +1025,10 @@ enum Misc {
     CURVE_LEN    =  2,         /* ecc named curve length  */
     KE_GROUP_LEN =  2,         /* key exchange group length */
     SERVER_ID_LEN = 20,        /* server session id length  */
+
+    CERT_COMP_LEN = 1,	           /* YH certificate compression length */
+    HELLO_EXT_CERTCOMPALGO_SZ = 2  /* YH length of number of items in certCompAlgoList */
+    HELLO_EXT_CERTCOMPALGO_MAX = 2 /* YH number of items in the certCompAlgoList */
 
     HANDSHAKE_HEADER_SZ   = 4,  /* type + length(3)        */
     RECORD_HEADER_SZ      = 5,  /* type + version + len(2) */
@@ -1829,6 +1839,7 @@ typedef enum {
     TLSX_STATUS_REQUEST_V2          = 0x0011, /* a.k.a. OCSP stapling v2 */
     TLSX_QUANTUM_SAFE_HYBRID        = 0x0018, /* a.k.a. QSH  */
     TLSX_SESSION_TICKET             = 0x0023,
+    TLSX_CERTIFICATE_COMPRESSION    = 0x0078, /* YH compression */
 #ifdef WOLFSSL_TLS13
     TLSX_KEY_SHARE                  = 0x0028,
     #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
@@ -1887,7 +1898,8 @@ WOLFSSL_LOCAL int TLSX_Parse(WOLFSSL* ssl, byte* input, word16 length,
    || defined(HAVE_QSH)                           \
    || defined(HAVE_SESSION_TICKET)                \
    || defined(HAVE_SECURE_RENEGOTIATION)          \
-   || defined(HAVE_SERVER_RENEGOTIATION_INFO)
+   || defined(HAVE_SERVER_RENEGOTIATION_INFO)     \
+   || defined(HAVE_CERTIFICATE_COMPRESSION)       //YH
 
 #error Using TLS extensions requires HAVE_TLS_EXTENSIONS to be defined.
 
@@ -2049,6 +2061,17 @@ WOLFSSL_LOCAL int TLSX_AddEmptyRenegotiationInfo(TLSX** extensions, void* heap);
 #endif
 
 #endif /* HAVE_SECURE_RENEGOTIATION */
+
+#if defined(HAVE_CERTIFICATE_COMPRESSION)
+
+/* YH */
+typedef struct CertificateCompression {
+    word16   certCompAlgoSz;    /* compression method length in bytes */
+    byte     certCompAlgoList[HELLO_EXT_CERTCOMPALGO_MAX]   /* compression method list */            
+    byte     certCompAlgo;      /* compression method to be used */
+} CertificateCompression
+
+#endif
 
 /** Session Ticket - RFC 5077 (session 3.2) */
 #ifdef HAVE_SESSION_TICKET
@@ -2370,6 +2393,9 @@ struct WOLFSSL_CTX {
     #ifdef HAVE_SUPPORTED_CURVES
         byte userCurves;                  /* indicates user called wolfSSL_CTX_UseSupportedCurve */
     #endif
+    #ifdef HAVE_CERTIFICATE_COMPRESSION   
+        byte usingCertComp;                /* YH certificate compression enabled */
+    #endif
 #endif
 #ifdef ATOMIC_USER
     CallbackMacEncrypt    MacEncryptCb;    /* Atomic User Mac/Encrypt Cb */
@@ -2481,8 +2507,7 @@ enum KeyExchangeAlgorithm {
     no_kea,
     rsa_kea,
     diffie_hellman_kea,
-    fortezza_kea,
-    psk_kea,
+    fortezza_kea    psk_kea,
     dhe_psk_kea,
     ecdhe_psk_kea,
     ntru_kea,
@@ -2525,9 +2550,11 @@ enum ClientCertificateType {
 
 enum CipherType { stream, block, aead };
 
-
-
-
+/* YH certificate compression algorithm list */
+enum CertificateCompressionAlgorithm {
+    zlib,
+    brotli
+};
 
 
 /* cipher for now */
@@ -2840,6 +2867,9 @@ typedef struct Options {
     word16            closeNotify:1;      /* we've received a close notify */
     word16            sentNotify:1;       /* we've sent a close notify */
     word16            usingCompression:1; /* are we using compression */
+#ifdef HAVE_CERTIFICATE_COMPRESSION
+    word16            usingCertComp:1 /* YH are we using CertCompression */
+#endif
     word16            haveRSA:1;          /* RSA available */
     word16            haveECC:1;          /* ECC available */
     word16            haveDH:1;           /* server DH parms set by user */
@@ -3416,6 +3446,8 @@ struct WOLFSSL {
         void*                 session_ticket_ctx;
         byte                  expect_session_ticket;
     #endif
+    #if defined(HAVE_CERTIFICATE_COMPRESSION)
+        CertificateCompression*  certificateCompression;	/* YH extension */
 #endif /* HAVE_TLS_EXTENSIONS */
 #ifdef OPENSSL_EXTRA
     byte*           ocspResp;
