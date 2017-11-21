@@ -1026,9 +1026,8 @@ enum Misc {
     KE_GROUP_LEN =  2,         /* key exchange group length */
     SERVER_ID_LEN = 20,        /* server session id length  */
 
-    CERT_COMP_LEN = 1,	           /* YH certificate compression length */
-    HELLO_EXT_CERTCOMPALGO_SZ = 2  /* YH length of number of items in certCompAlgoList */
-    HELLO_EXT_CERTCOMPALGO_MAX = 2 /* YH number of items in the certCompAlgoList */
+    HELLO_EXT_CERTCOMPALGO_SZ = 2,  /* YH length of number of items in certCompAlgoList */
+    HELLO_EXT_CERTCOMPALGO_MAX = 2, /* YH number of items in the certCompAlgoList */
 
     HANDSHAKE_HEADER_SZ   = 4,  /* type + length(3)        */
     RECORD_HEADER_SZ      = 5,  /* type + version + len(2) */
@@ -2067,9 +2066,8 @@ WOLFSSL_LOCAL int TLSX_AddEmptyRenegotiationInfo(TLSX** extensions, void* heap);
 /* YH */
 typedef struct CertificateCompression {
     word16   certCompAlgoSz;    /* compression method length in bytes */
-    byte     certCompAlgoList[HELLO_EXT_CERTCOMPALGO_MAX]   /* compression method list */            
-    byte     certCompAlgo;      /* compression method to be used */
-} CertificateCompression
+    byte     certCompAlgoList[HELLO_EXT_CERTCOMPALGO_MAX];   /* compression method list */               byte     certCompAlgo;      /* compression method to be used */
+} CertificateCompression;
 
 #endif
 
@@ -2507,7 +2505,8 @@ enum KeyExchangeAlgorithm {
     no_kea,
     rsa_kea,
     diffie_hellman_kea,
-    fortezza_kea    psk_kea,
+    fortezza_kea,
+    psk_kea,
     dhe_psk_kea,
     ecdhe_psk_kea,
     ntru_kea,
@@ -2556,6 +2555,7 @@ enum CertificateCompressionAlgorithm {
     brotli
 };
 
+void InitCertificateCompression(CertificateCompression* cc);
 
 /* cipher for now */
 typedef struct Ciphers {
@@ -2868,7 +2868,7 @@ typedef struct Options {
     word16            sentNotify:1;       /* we've sent a close notify */
     word16            usingCompression:1; /* are we using compression */
 #ifdef HAVE_CERTIFICATE_COMPRESSION
-    word16            usingCertComp:1 /* YH are we using CertCompression */
+    word16            usingCertComp:1;    /* YH are we using CertCompression */
 #endif
     word16            haveRSA:1;          /* RSA available */
     word16            haveECC:1;          /* ECC available */
@@ -3446,8 +3446,9 @@ struct WOLFSSL {
         void*                 session_ticket_ctx;
         byte                  expect_session_ticket;
     #endif
-    #if defined(HAVE_CERTIFICATE_COMPRESSION)
+    #ifdef HAVE_CERTIFICATE_COMPRESSION
         CertificateCompression*  certificateCompression;	/* YH extension */
+    #endif
 #endif /* HAVE_TLS_EXTENSIONS */
 #ifdef OPENSSL_EXTRA
     byte*           ocspResp;

@@ -44,6 +44,10 @@
     #include "zlib.h"
 #endif
 
+#ifdef HAVE_BROTLI
+    #include "brotli.h"
+#endif
+
 #ifdef HAVE_NTRU
     #include "libntruencrypt/ntru_crypto.h"
 #endif
@@ -1750,15 +1754,15 @@ void InitCipherSpecs(CipherSpecs* cs)
     cs->block_size  = 0;
 }
 
-void InitCertificateCompression(CertificateCompression* certificateCompression) {
+void InitCertificateCompression(CertificateCompression* cc) {
     int idx = 0;
     #ifdef HAVE_LIBZ
-    certificateCompression->certCompAlgo[idx++] = zlib;
+    cc->certCompAlgoList[idx++] = zlib;
     #endif
     #ifdef HAVE_BROTLI
-    certificateCompression->certCompAlgo[idx++] = brotli;
+    cc->certCompAlgoList[idx++] = brotli;
     #endif
-    certificateCompression->certCompAlgoSz = (word16)idx;
+    cc->certCompAlgoSz = (word16)idx;
 }
     
 void InitSuitesHashSigAlgo(Suites* suites, int haveECDSAsig, int haveRSAsig,
@@ -16175,7 +16179,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
         int                ret;
         word16             extSz = 0;
 
-
+        printf("SendClientHello invoked!\n");//YH
 #ifdef WOLFSSL_TLS13
         if (IsAtLeastTLSv1_3(ssl->version))
             return SendTls13ClientHello(ssl);
@@ -16304,10 +16308,11 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
             output[idx++] = ZLIB_COMPRESSION;
         else
             output[idx++] = NO_COMPRESSION;
-
+        printf("Before TLSX_WriteRequest\n");//YH
 #ifdef HAVE_TLS_EXTENSIONS
         idx += TLSX_WriteRequest(ssl, output + idx, client_hello);
-
+        printf("After TLSX_WriteRequest\n");//YH
+        
         (void)idx; /* suppress analyzer warning, keep idx current */
 #else
         if (extSz != 0) {
