@@ -1754,15 +1754,19 @@ void InitCipherSpecs(CipherSpecs* cs)
     cs->block_size  = 0;
 }
 
-void InitCertificateCompression(CertificateCompression* cc) {
+void InitCertificateCompression(CertificateCompression* cc) {//YH
+    printf("InitCertificateCompression invoked!\n");//YH
     int idx = 0;
-    #ifdef HAVE_LIBZ
+    //#ifdef HAVE_CCLIBZ	//YH TODO: we need to define it.
+    printf("zlib inserted in certCompAlgoList\n");//YH
     cc->certCompAlgoList[idx++] = zlib;
-    #endif
-    #ifdef HAVE_BROTLI
+    //#endif
+    //#ifdef HAVE_CCBROTLI
+    printf("brotli inserted in certCompAlgoList\n");//YH
     cc->certCompAlgoList[idx++] = brotli;
-    #endif
+    //#endif
     cc->certCompAlgoSz = (word16)idx;
+    printf("InitCertificateCompression Finished!\n");//YH
 }
     
 void InitSuitesHashSigAlgo(Suites* suites, int haveECDSAsig, int haveRSAsig,
@@ -4080,6 +4084,7 @@ void FreeHandshakeHashes(WOLFSSL* ssl)
    0 on success */
 int InitSSL(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
 {
+    printf("InitSSL invoked!\n");//YH
     int  ret;
 
     XMEMSET(ssl, 0, sizeof(WOLFSSL));
@@ -4261,6 +4266,7 @@ int InitSSL(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
         ssl->alpnSelectArg = ctx->alpnSelectArg;
     #endif
 #endif
+
 #ifdef HAVE_SUPPORTED_CURVES
     ssl->options.userCurves = ctx->userCurves;
 #endif
@@ -4274,7 +4280,6 @@ int InitSSL(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
 
     InitCiphers(ssl);
     InitCipherSpecs(&ssl->specs);
-
     /* all done with init, now can return errors, call other stuff */
 
     if (!writeDup) {
@@ -16213,13 +16218,22 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
         /* auto populate extensions supported unless user defined */
         if ((ret = TLSX_PopulateExtensions(ssl, 0)) != 0)
             return ret;
+        printf("TLSX_PopulateExtensions succesfully invoked in SendClientHello\n");//YH
     #ifdef HAVE_QSH
         if (QSH_Init(ssl) != 0)
             return MEMORY_E;
     #endif
+        printf("Before TLSX_GetRequestSize invoked in SendClientHello(extSz:%d)\n", extSz);//YH
         extSz = TLSX_GetRequestSize(ssl, client_hello);
+        printf("After TLSX_GetRequestSize invoked in SendClientHello(extSz:%d)\n", extSz);//YH
         if (extSz != 0)
             length += extSz;
+    /*
+    #ifdef HAVE_CERTIFICATE_COMPRESSION
+        if (CC_Init(ssl) != 0) //YH TODO:
+            return MEMORY_E;
+    #endif
+    */
 #else
         if (IsAtLeastTLSv1_2(ssl) && ssl->suites->hashSigAlgoSz)
             extSz += HELLO_EXT_SZ + HELLO_EXT_SIGALGO_SZ
@@ -16308,10 +16322,10 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
             output[idx++] = ZLIB_COMPRESSION;
         else
             output[idx++] = NO_COMPRESSION;
-        printf("Before TLSX_WriteRequest\n");//YH
+        printf("Before TLSX_WriteRequest(in SendClientHello)\n");//YH
 #ifdef HAVE_TLS_EXTENSIONS
         idx += TLSX_WriteRequest(ssl, output + idx, client_hello);
-        printf("After TLSX_WriteRequest\n");//YH
+        printf("After TLSX_WriteRequest(in SendClientHello)\n");//YH
         
         (void)idx; /* suppress analyzer warning, keep idx current */
 #else
@@ -18053,6 +18067,11 @@ static int NtruSecretDecrypt(QSHKey* key, byte* bufIn, word32 inSz,
     return ret;
 }
 #endif /* HAVE_NTRU */
+
+
+//YH : Do we need CC_Init?
+
+
 
 int QSH_Init(WOLFSSL* ssl)
 {
@@ -22168,6 +22187,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
     int DoClientHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                              word32 helloSz)
     {
+	printf("DoClientHello invoked!\n");
         byte            b;
         byte            bogusID = 0;   /* flag for a bogus session id */
         ProtocolVersion pv;

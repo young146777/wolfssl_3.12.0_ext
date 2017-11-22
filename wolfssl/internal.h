@@ -2391,9 +2391,6 @@ struct WOLFSSL_CTX {
     #ifdef HAVE_SUPPORTED_CURVES
         byte userCurves;                  /* indicates user called wolfSSL_CTX_UseSupportedCurve */
     #endif
-    #ifdef HAVE_CERTIFICATE_COMPRESSION   
-        byte usingCertComp;                /* YH certificate compression enabled */
-    #endif
 #endif
 #ifdef ATOMIC_USER
     CallbackMacEncrypt    MacEncryptCb;    /* Atomic User Mac/Encrypt Cb */
