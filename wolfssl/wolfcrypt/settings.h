@@ -162,6 +162,7 @@
     #include "user_settings.h"
 #endif
 
+#define HAVE_CERTIFICATE_COMPRESSION  /* YH */
 
 /* make sure old RNG name is used with CTaoCrypt FIPS */
 #ifdef HAVE_FIPS

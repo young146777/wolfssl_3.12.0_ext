@@ -1757,18 +1757,48 @@ void InitCipherSpecs(CipherSpecs* cs)
 void InitCertificateCompression(CertificateCompression* cc) {//YH
     printf("InitCertificateCompression invoked!\n");//YH
     int idx = 0;
+    
     //#ifdef HAVE_CCLIBZ	//YH TODO: we need to define it.
-    printf("zlib inserted in certCompAlgoList\n");//YH
+    printf("(zlib inserted in certCompAlgoList)\n");//YH
     cc->certCompAlgoList[idx++] = zlib;
     //#endif
     //#ifdef HAVE_CCBROTLI
-    printf("brotli inserted in certCompAlgoList\n");//YH
+    printf("(brotli inserted in certCompAlgoList)\n");//YH
     cc->certCompAlgoList[idx++] = brotli;
     //#endif
+    printf("(none inserted in certCompAlgoList)\n");//YH
+    cc->certCompAlgoList[idx++] = none;
     cc->certCompAlgoSz = (word16)idx;
-    printf("InitCertificateCompression Finished!\n");//YH
+    cc->certCompAlgo = 0; //0 : default(zlib)
 }
     
+
+static const byte const certcomp[] =
+{
+#ifdef HAVE_LIBZ
+    zlib,
+#endif
+#ifdef HAVE_BROTLI
+    brotli,
+#endif
+    none,
+};
+
+
+/* returns the certcomplist array */
+const byte const* GetCertCompList(void)
+{
+    return certcomp;
+}
+
+
+/* returns the size of the cipher_names array */
+int GetCertCompListSize(void)
+{
+    return (int)(sizeof(certcomp) / sizeof(byte));
+}
+
+
 void InitSuitesHashSigAlgo(Suites* suites, int haveECDSAsig, int haveRSAsig,
                            int haveAnon, int tls1_2, int keySz)
 {
@@ -12804,6 +12834,8 @@ int SendCertificate(WOLFSSL* ssl)
     word32 certSz, certChainSz, headerSz, listSz, payloadSz;
     word32 length, maxFragment;
 
+    printf("----------SendCertificate invoked!----------\n");
+
     if (ssl->options.usingPSK_cipher || ssl->options.usingAnon_cipher)
         return 0;  /* not needed */
 
@@ -16184,7 +16216,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
         int                ret;
         word16             extSz = 0;
 
-        printf("SendClientHello invoked!\n");//YH
+        printf("----------SendClientHello invoked!-----------\n");//YH
 #ifdef WOLFSSL_TLS13
         if (IsAtLeastTLSv1_3(ssl->version))
             return SendTls13ClientHello(ssl);
@@ -16404,7 +16436,8 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
 #endif
 
         ssl->buffers.outputBuffer.length += sendSz;
-
+        
+        printf("---------------SendClientHello Finished!!--------------\n");
         return SendBuffered(ssl);
     }
 
@@ -16564,6 +16597,8 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
         word32          i = *inOutIdx;
         word32          begin = i;
         int             ret;
+ 
+        printf("----Processing Server Hello(DoServerHello)----\n");//YH
 
 #ifdef WOLFSSL_CALLBACKS
         if (ssl->hsInfoOn) AddPacketName("ServerHello", &ssl->handShakeInfo);
@@ -16810,6 +16845,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
                 DtlsMsgPoolReset(ssl);
             }
         #endif
+	printf("------------DoClientHello Finished!------------\n");
 
         return SetCipherSpecs(ssl);
     }
@@ -20067,6 +20103,8 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                + ID_LEN + ENUM_LEN
                + SUITE_LEN
                + ENUM_LEN;
+        
+        printf("-------------SendServerHello invoked!------------\n");//YH 
 
 #ifdef HAVE_TLS_EXTENSIONS
         length += TLSX_GetResponseSize(ssl, server_hello);
@@ -20239,6 +20277,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
 
         ssl->options.serverState = SERVER_HELLO_COMPLETE;
 
+        printf("---------------SendServerHello Finished!!--------------\n");
         if (ssl->options.groupMessages)
             return 0;
         else
@@ -22187,7 +22226,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
     int DoClientHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                              word32 helloSz)
     {
-	printf("DoClientHello invoked!\n");
+	printf("------------Processing Client Hello(DoClientHello)------------\n");
         byte            b;
         byte            bogusID = 0;   /* flag for a bogus session id */
         ProtocolVersion pv;
@@ -22659,6 +22698,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                 return ret;
             }
         }
+	printf("------------DoClientHello Finished!------------\n");
         return MatchSuite(ssl, &clSuites);
     }
 

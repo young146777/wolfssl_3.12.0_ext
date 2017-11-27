@@ -1119,6 +1119,7 @@ int wolfSSL_mcast_set_highwater_ctx(WOLFSSL* ssl, void* ctx)
 /* return underlying connect or accept, SSL_SUCCESS on ok */
 int wolfSSL_negotiate(WOLFSSL* ssl)
 {
+    printf("wolfSSL_negotiate invoked!\n");//YH
     int err = SSL_FATAL_ERROR;
 
     WOLFSSL_ENTER("wolfSSL_negotiate");

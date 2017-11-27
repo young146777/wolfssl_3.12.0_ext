@@ -963,7 +963,6 @@ enum Misc {
     INVALID_BYTE    = 0xff,     /* Used to initialize cipher specs values */
     NO_COMPRESSION  =  0,
     ZLIB_COMPRESSION = 221,     /* wolfSSL zlib compression */
-    BROTLI_COMPRESSION = 222,   /* YH brotli compression */
     HELLO_EXT_SIG_ALGO = 13,    /* ID for the sig_algo hello extension */
     HELLO_EXT_EXTMS = 0x0017,   /* ID for the extended master secret ext */
     SECRET_LEN      = 48,       /* pre RSA and all master */
@@ -1027,7 +1026,7 @@ enum Misc {
     SERVER_ID_LEN = 20,        /* server session id length  */
 
     HELLO_EXT_CERTCOMPALGO_SZ = 2,  /* YH length of number of items in certCompAlgoList */
-    HELLO_EXT_CERTCOMPALGO_MAX = 2, /* YH number of items in the certCompAlgoList */
+    HELLO_EXT_CERTCOMPALGO_MAX = 3, /* YH number of items in the certCompAlgoList */
 
     HANDSHAKE_HEADER_SZ   = 4,  /* type + length(3)        */
     RECORD_HEADER_SZ      = 5,  /* type + version + len(2) */
@@ -1838,7 +1837,7 @@ typedef enum {
     TLSX_STATUS_REQUEST_V2          = 0x0011, /* a.k.a. OCSP stapling v2 */
     TLSX_QUANTUM_SAFE_HYBRID        = 0x0018, /* a.k.a. QSH  */
     TLSX_SESSION_TICKET             = 0x0023,
-    TLSX_CERTIFICATE_COMPRESSION    = 0x0078, /* YH compression */
+    TLSX_CERTIFICATE_COMPRESSION    = 0x0034, /* YH compression */
 #ifdef WOLFSSL_TLS13
     TLSX_KEY_SHARE                  = 0x0028,
     #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
@@ -2549,10 +2548,16 @@ enum CipherType { stream, block, aead };
 /* YH certificate compression algorithm list */
 enum CertificateCompressionAlgorithm {
     zlib,
-    brotli
+    brotli,
+    none
 };
 
+
 void InitCertificateCompression(CertificateCompression* cc);
+const byte const* GetCertCompList(void);
+int GetCertCompListSize(void);
+int cc_pick_method(int priority);
+
 
 /* cipher for now */
 typedef struct Ciphers {
