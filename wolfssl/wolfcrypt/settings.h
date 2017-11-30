@@ -163,6 +163,8 @@
 #endif
 
 #define HAVE_CERTIFICATE_COMPRESSION  /* YH */
+//#define HAVE_CCBROTLI
+#define HAVE_CCLIBZ
 
 /* make sure old RNG name is used with CTaoCrypt FIPS */
 #ifdef HAVE_FIPS

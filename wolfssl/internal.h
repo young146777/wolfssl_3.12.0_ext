@@ -175,7 +175,10 @@
 #endif
 
 /* YH */
-#ifdef HAVE_BROTLI
+#ifdef HAVE_CCLIBZ
+    #include "zlib.h"
+#endif
+#ifdef HAVE_CCBROTLI
     #include "brotli.h"
 #endif
 
@@ -2552,11 +2555,20 @@ enum CertificateCompressionAlgorithm {
     none
 };
 
+typedef struct CompressedCertificate {
+    word32 length;		//size of compressed certificate
+    byte* buffer;	//compressed certificate
+} CompressedCert;
+
 
 void InitCertificateCompression(CertificateCompression* cc);
 const byte const* GetCertCompList(void);
 int GetCertCompListSize(void);
 int cc_pick_method(int priority);
+int CompressCertificate(WOLFSSL* ssl, byte* inbuffer, int buffSz, CompressedCert* compCert);
+int DeCompressCertificate(WOLFSSL* ssl, byte* inbuffer, int buffSz, byte* outbuffer);
+
+
 
 
 /* cipher for now */
@@ -3362,7 +3374,7 @@ struct WOLFSSL {
     curve25519_key* peerX25519Key;
     byte            peerX25519KeyPresent;
 #endif
-#ifdef HAVE_LIBZ
+#if defined(HAVE_LIBZ) || defined(HAVE_CCLIBZ)
     z_stream        c_stream;           /* compression   stream */
     z_stream        d_stream;           /* decompression stream */
     byte            didStreamInit;      /* for stream init and end */

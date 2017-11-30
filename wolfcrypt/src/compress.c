@@ -27,7 +27,7 @@
 
 #include <wolfssl/wolfcrypt/settings.h>
 
-#ifdef HAVE_LIBZ
+#if defined(HAVE_LIBZ) || defined(HAVE_CCLIBZ)
 
 
 #include <wolfssl/wolfcrypt/compress.h>
