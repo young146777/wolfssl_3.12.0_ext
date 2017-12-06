@@ -1,7 +1,7 @@
 CC=gcc
 LD=gcc
 CFLAGS=-I/usr/local/include -Wcpp
-LDFLAGS=-L/usr/local/lib -lwolfssl -lm
+LDFLAGS=-L/usr/local/lib -lwolfssl -lm -lz
 SERV=server
 CLNT=client
 BIN=$(SERV) $(CLNT)
