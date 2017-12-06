@@ -4756,7 +4756,7 @@ static word16 TLSX_CertificateCompression_GetSize(void* data, byte isRequest)
         length += OPAQUE16_LEN + OPAQUE8_LEN; //for length + chosen algorithm 
     }
 
-    printf("TLSX_CertificateCompression_GetSize invoked&finished!(Size:%d)\n", length);//YH
+    //printf("TLSX_CertificateCompression_GetSize invoked&finished!(Size:%d)\n", length);//YH
     return length;
 }
 
@@ -4791,14 +4791,14 @@ static word16 TLSX_CertificateCompression_Write(void* data, byte* output, byte i
         XMEMCPY(output + OPAQUE16_LEN, &(cc->certCompAlgo), OPAQUE8_LEN);
         length += OPAQUE16_LEN + OPAQUE8_LEN;
     }
-    printf("TLSX_CertificateCompression_Write invoked&finished!(return size : %d)\n", length);//YH
+    //printf("TLSX_CertificateCompression_Write invoked&finished!(return size : %d)\n", length);//YH
     return length;
 }
 //YH TODO:
 static int TLSX_CertificateCompression_Parse(WOLFSSL *ssl, byte* input,
                                           word16 length, byte isRequest)
 {
-    printf("TLSX_CertificateCompression_Parse invoked!\n");//YH
+    //printf("TLSX_CertificateCompression_Parse invoked!\n");//YH
     CertificateCompression* cc = ssl->certificateCompression;
     word16 datalen;
     /* Must contain a length and at least algorithm. */
@@ -4808,17 +4808,17 @@ static int TLSX_CertificateCompression_Parse(WOLFSSL *ssl, byte* input,
     ato16(input, &datalen);
     input += OPAQUE16_LEN;
 
-    printf("  datalen : %d\n", datalen);
+    //printf("  datalen : %d\n", datalen);
     /* Algorithm array must fill rest of data. */
     if (length != OPAQUE16_LEN + datalen)
         return BUFFER_ERROR;
 
     if (isRequest) {
-        printf("  isRequest==true\n");
+        //printf("  isRequest==true\n");
         XMEMCPY(cc->certCompAlgoList, input, datalen);
         cc->certCompAlgoSz = datalen;
     } else {
-        printf("  isRequest==false\n");
+        //printf("  isRequest==false\n");
         XMEMCPY(&(cc->certCompAlgo), input, datalen);
         
     }
@@ -4828,7 +4828,7 @@ static int TLSX_CertificateCompression_Parse(WOLFSSL *ssl, byte* input,
 //YH TODO: Think difference between client/server in UseCertificateCompression 
 static int TLSX_UseCertificateCompression(TLSX** extensions, void* data, void* heap)
 {  
-    printf("TLSX_UseCertificateCompression invoked!\n");//YH
+    //printf("TLSX_UseCertificateCompression invoked!\n");//YH
     WOLFSSL* ssl = (WOLFSSL*) data;
     TLSX* extension;
 
@@ -4847,7 +4847,7 @@ static int TLSX_UseCertificateCompression(TLSX** extensions, void* data, void* h
     /* initialize cc */
     InitCertificateCompression(cc);
 
-    printf("Initialization check(size : %d, certCompAlgoList[0]: %d, [1]:%d)\n", cc->certCompAlgoSz, cc->certCompAlgoList[0], cc->certCompAlgoList[1]);
+    //printf("Initialization check(size : %d, certCompAlgoList[0]: %d, [1]:%d)\n", cc->certCompAlgoSz, cc->certCompAlgoList[0], cc->certCompAlgoList[1]);
     int ret = TLSX_Push(extensions, TLSX_CERTIFICATE_COMPRESSION, cc, heap);
 
     if (ret != 0) {
@@ -4857,7 +4857,7 @@ static int TLSX_UseCertificateCompression(TLSX** extensions, void* data, void* h
 
     extension = TLSX_Find(ssl->extensions, TLSX_CERTIFICATE_COMPRESSION);
     extension->resp = 1;
-    printf("TLSX_Push successfully invoked in TLSX_UseCertificateCompression!\n");//YH
+    //printf("TLSX_Push successfully invoked in TLSX_UseCertificateCompression!\n");//YH
 
     return 0;
 }
@@ -4866,7 +4866,7 @@ static int TLSX_UseCertificateCompression(TLSX** extensions, void* data, void* h
 
 static void TLSX_CertificateCompression_FreeAll(CertificateCompression* cc, void* heap)
 {
-    printf("CC_FREE_ALL invoked!\n");//YH
+    //printf("CC_FREE_ALL invoked!\n");//YH
     (void)heap;
 
     if (cc != NULL)
@@ -7050,12 +7050,12 @@ static word16 TLSX_GetSize(TLSX* list, byte* semaphore, byte msgType)
     word16 length = 0;
     byte   isRequest = (msgType == client_hello ||
                         msgType == certificate_request);
-    printf("TLSX_GetSize invoked!\n");
+    //printf("TLSX_GetSize invoked!\n");
     int numlist = 0;//YH
     while ((extension = list)) {
         list = extension->next;
         ++numlist;//YH
-        printf("  extension type in list(in TLSX_GetSize) : %x)\n", extension->type);//YH
+        //printf("  extension type in list(in TLSX_GetSize) : %x)\n", extension->type);//YH
 
         /* only extensions marked as response are sent back to the client. */
         if (!isRequest && !extension->resp)
@@ -7167,7 +7167,7 @@ static word16 TLSX_GetSize(TLSX* list, byte* semaphore, byte msgType)
         /* extensions don't overlap with ssl level ones. */
         TURN_ON(semaphore, TLSX_ToSemaphore(extension->type));
     }
-    printf("TLSX_GetSize finished(numlist: %d, totallen : %d)\n", numlist, length);
+    //printf("TLSX_GetSize finished(numlist: %d, totallen : %d)\n", numlist, length);
     return length;
 }
 
@@ -7180,7 +7180,7 @@ static word16 TLSX_Write(TLSX* list, byte* output, byte* semaphore,
     word16 length_offset = 0;
     byte   isRequest = (msgType == client_hello ||
                         msgType == certificate_request);
-    printf("TLSX_Write invoked!\n");
+    //printf("TLSX_Write invoked!\n");
     while ((extension = list)) {
         list = extension->next;
 
@@ -7525,7 +7525,7 @@ static byte* TLSX_QSHKeyFind_Pub(QSHKey* qsh, word16* pubLen, word16 name)
 
 int TLSX_PopulateExtensions(WOLFSSL* ssl, byte isServer)
 {
-    printf("TLSX_PopulateExtension invoked!\n");//YH
+    //printf("TLSX_PopulateExtension invoked!\n");//YH
     int ret = 0;
     byte* public_key      = NULL;
     word16 public_key_len = 0;
@@ -7720,7 +7720,7 @@ int TLSX_PopulateExtensions(WOLFSSL* ssl, byte isServer)
     }
 
     WOLFSSL_MSG("Adding certificate compression extension"); 
-    printf("Adding Certificate Compression extension in TLSX_PopulateExtensions\n");//YH
+    //printf("Adding Certificate Compression extension in TLSX_PopulateExtensions\n");//YH
     if ((ret = TLSX_UseCertificateCompression(&ssl->extensions, ssl, ssl->heap))
                                                                          != 0) {
             return ret;
@@ -7906,7 +7906,7 @@ int TLSX_PopulateExtensions(WOLFSSL* ssl, byte isServer)
 /** Tells the buffered size of extensions to be sent into the client hello. */
 word16 TLSX_GetRequestSize(WOLFSSL* ssl, byte msgType)
 {
-    printf("TLSX_GetRequestSize invoked!\n");//YH
+    //printf("TLSX_GetRequestSize invoked!\n");//YH
     word16 length = 0;
     byte semaphore[SEMAPHORE_SIZE] = {0};
 
@@ -7965,14 +7965,14 @@ word16 TLSX_GetRequestSize(WOLFSSL* ssl, byte msgType)
     if (length)
         length += OPAQUE16_LEN; /* for total length storage. */
     
-    printf("TLSX_GetRequestSize successfully finished!(total len:%d)\n", length);//YH
+    //printf("TLSX_GetRequestSize successfully finished!(total len:%d)\n", length);//YH
     return length;
 }
 
 /** Writes the extensions to be sent into the client hello. */
 word16 TLSX_WriteRequest(WOLFSSL* ssl, byte* output, byte msgType)
 {
-    printf("TLSX_WriteRequest function invoked!\n");
+    //printf("TLSX_WriteRequest function invoked!\n");
     word16 offset = 0;
     byte semaphore[SEMAPHORE_SIZE] = {0};
 
@@ -8071,7 +8071,7 @@ word16 TLSX_GetResponseSize(WOLFSSL* ssl, byte msgType)
     word16 length = 0;
     byte semaphore[SEMAPHORE_SIZE] = {0};
 
-    printf("TLSX_GetResponseSize invoked!\n");//YH
+    //printf("TLSX_GetResponseSize invoked!\n");//YH
 
     switch (msgType) {
         case server_hello:
@@ -8142,7 +8142,7 @@ word16 TLSX_GetResponseSize(WOLFSSL* ssl, byte msgType)
     if (length || msgType != server_hello)
         length += OPAQUE16_LEN; /* for total length storage. */
     
-    printf("TLSX_GetResponseSize finished!\n");//YH
+    //printf("TLSX_GetResponseSize finished!\n");//YH
     
     return length;
 }
@@ -8152,7 +8152,7 @@ word16 TLSX_WriteResponse(WOLFSSL *ssl, byte* output, byte msgType)
 {
     word16 offset = 0;
 
-    printf("TLSX_WriteResponse invoked!\n");//YH
+    //printf("TLSX_WriteResponse invoked!\n");//YH
     
     if (TLSX_SupportExtensions(ssl) && output) {
         byte semaphore[SEMAPHORE_SIZE] = {0};
@@ -8229,7 +8229,7 @@ word16 TLSX_WriteResponse(WOLFSSL *ssl, byte* output, byte msgType)
         if (offset > OPAQUE16_LEN || msgType != server_hello)
             c16toa(offset - OPAQUE16_LEN, output); /* extensions length */
     }
-    printf("TLSX_WriteResponse finished!\n");//YH
+    //printf("TLSX_WriteResponse finished!\n");//YH
 
     return offset;
 }
@@ -8240,7 +8240,7 @@ word16 TLSX_WriteResponse(WOLFSSL *ssl, byte* output, byte msgType)
 int TLSX_Parse(WOLFSSL* ssl, byte* input, word16 length, byte msgType,
                                                                  Suites *suites)
 {
-    printf("TLSX_Parse invoked!\n");//YH
+    //printf("TLSX_Parse invoked!\n");//YH
     int ret = 0;
     word16 offset = 0;
     byte isRequest = (msgType == client_hello ||
@@ -8268,7 +8268,7 @@ int TLSX_Parse(WOLFSSL* ssl, byte* input, word16 length, byte msgType,
         if (offset + size > length)
             return BUFFER_ERROR;
 
-        printf("received message type(in TLSX_Parse) : %x\n", type);
+        //printf("received message type(in TLSX_Parse) : %x\n", type);
 
         switch (type) {
             case TLSX_SERVER_NAME:
@@ -8420,7 +8420,7 @@ int TLSX_Parse(WOLFSSL* ssl, byte* input, word16 length, byte msgType,
                 break;
 
             case TLSX_CERTIFICATE_COMPRESSION:
-                printf("Certificate Compression extension received\n"); //YH
+                //printf("Certificate Compression extension received\n"); //YH
                 if (!IsAtLeastTLSv1_2(ssl))
                     break;
 

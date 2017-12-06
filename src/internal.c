@@ -47,11 +47,12 @@
 #ifdef HAVE_CCLIBZ
     #include "zlib.h"
 #endif
-
+/*
 #ifdef HAVE_CCBROTLI
-    #include "brotli.h"
+    #include <brotli/encode.h>
+    #include <brotli/decode.h>
 #endif
-
+*/
 #ifdef HAVE_NTRU
     #include "libntruencrypt/ntru_crypto.h"
 #endif
@@ -459,10 +460,12 @@ static INLINE void ato32(const byte* c, word32* u32)
         ssl->d_stream.avail_in  = inSz;
         ssl->d_stream.next_out  = out;
         ssl->d_stream.avail_out = outSz;
-
+        
         err = inflate(&ssl->d_stream, Z_SYNC_FLUSH);
-        if (err != Z_OK && err != Z_STREAM_END) return ZLIB_DECOMPRESS_ERROR;
-
+        if (err != Z_OK && err != Z_STREAM_END) {
+            //printf("ZLIB_DECOMPRESS_ERROR\n");	//YH
+            return ZLIB_DECOMPRESS_ERROR;
+        }
         return (int)ssl->d_stream.total_out - currTotal;
     }
 
@@ -1759,18 +1762,18 @@ void InitCipherSpecs(CipherSpecs* cs)
 }
 
 void InitCertificateCompression(CertificateCompression* cc) {//YH
-    printf("InitCertificateCompression invoked!\n");//YH
+    //printf("InitCertificateCompression invoked!\n");//YH
     int idx = 0;
     
     //#ifdef HAVE_CCLIBZ	//YH TODO: we need to define it.
-    printf("(zlib inserted in certCompAlgoList)\n");//YH
+    //printf("(zlib inserted in certCompAlgoList)\n");//YH
     cc->certCompAlgoList[idx++] = zlib;
     //#endif
     //#ifdef HAVE_CCBROTLI
-    printf("(brotli inserted in certCompAlgoList)\n");//YH
+    //printf("(brotli inserted in certCompAlgoList)\n");//YH
     cc->certCompAlgoList[idx++] = brotli;
     //#endif
-    printf("(none inserted in certCompAlgoList)\n");//YH
+    //printf("(none inserted in certCompAlgoList)\n");//YH
     cc->certCompAlgoList[idx++] = none;
     cc->certCompAlgoSz = (word16)idx;
     cc->certCompAlgo = 0; //0 : default(zlib)
@@ -4118,7 +4121,7 @@ void FreeHandshakeHashes(WOLFSSL* ssl)
    0 on success */
 int InitSSL(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
 {
-    printf("InitSSL invoked!\n");//YH
+    //printf("InitSSL invoked!\n");//YH
     int  ret;
 
     XMEMSET(ssl, 0, sizeof(WOLFSSL));
@@ -7882,13 +7885,40 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                 }
 
                 if (ssl->certificateCompression->certCompAlgo != none) {
-                    int result = InitStreams(ssl);
-                    if (result != 0) printf("InitStreams failed\n");
+                    InitStreams(ssl);
+                    //if (result != 0) printf("InitStreams failed\n");
                     int deCertSz = -1; //decompressed cert size
+//                    printf("listSz: %d\n", listSz);
+//                    printf("Before decompression\n");
+//                    printf("first(recv) : ");
+//                    for (int i = 0; i < 50; i++) {
+//                        printf("%x", (input+args->idx)[i]);
+//                        if (i == 49) printf("\n");
+//                    }
+//                    printf("last(recv) : ");
+//                    for (int i = 0; i < 50; i++) {
+//                        printf("%x", (input+args->idx+certSz-50)[i]);
+//                        if (i == 49) printf("\n");
+//                    }
+                    byte* outbuf = XMALLOC(2*certSz, ssl->heap, DYNAMIC_TYPE_CERT);
                     deCertSz = DeCompressCertificate(ssl, input + args->idx, certSz, 
-                                                     args->certs[args->totalCerts].buffer);
-                    if (deCertSz < 0) printf("decompression failed\n");
+                                                     outbuf, 2*certSz);
+//                    printf("certificate length(recv)(before: %d, after: %d)\n",certSz, deCertSz);
+//                    
+//                    if (deCertSz < 0) printf("decompression failed\n");
                     args->certs[args->totalCerts].length = deCertSz;
+                    args->certs[args->totalCerts].buffer = outbuf;
+//                    printf("After decompression\n");
+//                    printf("first(recv) : ");
+//                    for (int i = 0; i < 50; i++) {
+//                        printf("%x", args->certs[args->totalCerts].buffer[i]);
+//                        if (i == 49) printf("\n");
+//                    }
+//                    printf("last(recv) : ");
+//                    for (int i = 0; i < 50; i++) {
+//                        printf("%x", (args->certs[args->totalCerts].buffer+deCertSz-50)[i]);
+//                        if (i == 49) printf("\n");
+//                    }
                     FreeStreams(ssl);
                 } else {
                     args->certs[args->totalCerts].length = certSz;
@@ -8865,6 +8895,7 @@ exit_ppc:
 static int DoCertificate(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                                                                 word32 size)
 {
+//    printf("----------DoCertificate invoked!\n");
     return ProcessPeerCerts(ssl, input, inOutIdx, size);
 }
 
@@ -12841,54 +12872,58 @@ int SendFinished(WOLFSSL* ssl)
 }
 
 /* YH compress algorithm */
-/* option : 0 => cert, 1 => certChain */
-int CompressCertificate(WOLFSSL* ssl, byte* inbuffer, int buffSz, CompressedCert* compCert) {
-    CertificateCompression* cc = ssl->certificateCompression;
-    byte method = cc->certCompAlgo;
-    
-    switch (method) {
-        case zlib:
-            //zlib compression
-            printf("zlib compression invoked!\n");
-            compCert->length = myCompress(ssl, inbuffer, buffSz, compCert->buffer, sizeof(compCert->buffer));
-            if (buffSz < 0) {
-                printf("zlib compression failed!\n");
-            }
-            break;
-        case brotli:
-            //brotli compression
-            printf("brotli compression invoked!\n");
-            break;
-        default:
-            printf("CompressCertificate Failed!(method : %d)\n", method);
-            return -1;   
-    }
-    printf("CompressCertificate Success!(method : %d)\n", method);
-    return compCert->length;
-}
-
-int DeCompressCertificate(WOLFSSL* ssl, byte* inbuffer, int buffSz, byte* outbuffer) {
+int CompressCertificate(WOLFSSL* ssl, byte* inbuffer, int inSz, byte* outbuffer, int outSz) {
     CertificateCompression* cc = ssl->certificateCompression;
     byte method = cc->certCompAlgo;
     int dataSz = -1;
+    if (inSz < 0) {
+        //printf("zlib compression failed!\n");
+        return -1;
+    }
     switch (method) {
         case zlib:
             //zlib compression
-            printf("zlib decompression invoked!\n");
-            dataSz = myDeCompress(ssl, inbuffer, buffSz, outbuffer, sizeof(outbuffer));
-            if (buffSz < 0) {
-                printf("zlib decompression failed!\n");
-            }
+            //printf("zlib compression invoked!(inputbufSz:%d, outputbufSz:%d)\n", inSz, outSz);
+            dataSz = myCompress(ssl, inbuffer, inSz, outbuffer, outSz);
             break;
         case brotli:
             //brotli compression
-            printf("brotli decompression invoked!\n");
+            //printf("brotli compression invoked!\n");
             break;
         default:
-            printf("DeCompressCertificate Failed!(method : %d)\n", method);
-            return -1;   
+            //printf("CompressCertificate Failed!(method : %d)\n", method);
+            break;   
     }
-    printf("DeCompressCertificate Success!(method : %d)\n", method);
+    //if (dataSz > 0) printf("CompressCertificate Success!(method : %d)\n", method);
+    //else printf("CompressCertificate Failed...(method : %d)\n", method);
+    return dataSz;
+}
+
+int DeCompressCertificate(WOLFSSL* ssl, byte* inbuffer, int inSz, byte* outbuffer, int outSz) {
+    CertificateCompression* cc = ssl->certificateCompression;
+    byte method = cc->certCompAlgo;
+    int dataSz = -1;
+    if (inSz < 0) {
+        //printf("zlib compression failed!\n");
+        return -1;
+    }
+    switch (method) {
+        case zlib:
+            //zlib compression
+            //printf("zlib decompression invoked!\n");
+            dataSz = myDeCompress(ssl, inbuffer, inSz, outbuffer, outSz);
+            break;
+        case brotli:
+            //brotli compression
+            //printf("brotli decompression invoked!\n");
+            break;
+        default:
+            //printf("DeCompressCertificate Failed!(method : %d)\n", method);
+            break;
+    }
+
+    //if (dataSz > 0) printf("DeCompressCertificate Success!(method : %d)\n", method);
+    //else printf("DeCompressCertificate Failed...(method : %d)\n", method);
 
     return dataSz;
 }
@@ -12901,19 +12936,21 @@ int SendCertificate(WOLFSSL* ssl)
     int    ret = 0;
     word32 certSz, certChainSz, headerSz, listSz, payloadSz;
     word32 length, maxFragment;
+    byte* compCert = NULL;
+    byte* compCertChain = NULL;
 
-    printf("----------SendCertificate invoked!----------\n");
-
-    CompressedCert* compCert = XMALLOC(ssl->buffers.certificate->length,    ssl->heap, DYNAMIC_TYPE_CERT);
-    CompressedCert* compCertChain = XMALLOC(ssl->buffers.certChain->length, ssl->heap, DYNAMIC_TYPE_CERT);
+    //printf("----------SendCertificate invoked!----------\n");
+    if (!ssl->buffers.certificate) {
+        //printf("Send Cert missing certificate buffer\n");
+        return BUFFER_ERROR;
+    } 
     /* YH Initialize zlib stream */
     if (ssl->certificateCompression->certCompAlgo != none) {
-        int result = InitStreams(ssl);
-        if (result != 0) printf("InitStreams failed\n");
+        InitStreams(ssl);
+        //if (result != 0) //printf("InitStreams failed\n");
     }
+
     if (ssl->options.usingPSK_cipher || ssl->options.usingAnon_cipher) {
-        XFREE(compCert, heap, DYNAMIC_TYPE_CERT);	//YH
-        XFREE(compCertChain, heap, DYNAMIC_TYPE_CERT);	//YH
         return 0;  /* not needed */
     }
     
@@ -12925,27 +12962,55 @@ int SendCertificate(WOLFSSL* ssl)
         listSz = 0;
     }
     else if (ssl->certificateCompression->certCompAlgo != none) {
-        printf("Certificate Compression will be operated.\n");
+        //printf("Certificate Compression will be operated.\n");
         if (!ssl->buffers.certificate) {
             WOLFSSL_MSG("Send Cert missing certificate buffer");
-            XFREE(compCert, heap, DYNAMIC_TYPE_CERT);	//YH
-            XFREE(compCertChain, heap, DYNAMIC_TYPE_CERT);	//YH
             return BUFFER_ERROR;
         }
+        compCert = XMALLOC(ssl->buffers.certificate->length,    ssl->heap, DYNAMIC_TYPE_CERT);
+        //printf("compCert is allocated\n");
+        
+        //printf("Before compression\n");
+        //printf("first(Send) : ");
+        //for (int i = 0; i < 50; i++) {
+        //    printf("%x", ssl->buffers.certificate->buffer[i]);
+        //    if (i == 49) printf("\n");
+        //}
+        //printf("last(Send) : ");
+        //for (int i = 0; i < 50; i++) {
+        //    printf("%x", (ssl->buffers.certificate->buffer+ssl->buffers.certificate->length-50)[i]);
+        //    if (i == 49) printf("\n");
+        //}
         int isCompressed = CompressCertificate(ssl, ssl->buffers.certificate->buffer, 
-                                     ssl->buffers.certificate->length, compCert);
-        if (isCompressed < 0) printf("certSz error(compress failed)\n");
+                       ssl->buffers.certificate->length, compCert, ssl->buffers.certificate->length);
+        //printf("certificate length(send)(before: %d, after: %d)\n",ssl->buffers.certificate->length, isCompressed);
+        //if (isCompressed < 0) printf("certSz error(compress failed)\n");
         certSz = (word32) isCompressed;
         headerSz = 2 * CERT_HEADER_SZ;
         /* list + cert size */
         length = certSz + headerSz;
         listSz = certSz + CERT_HEADER_SZ;
 
+        //printf("After compression\n");
+        //printf("first(Send) : ");
+        //for (int i = 0; i < 50; i++) {
+        //    printf("%x", compCert[i]);
+        //    if (i == 49) printf("\n");
+        //}
+        //printf("last(Send) : ");
+        //for (int i = 0; i < 50; i++) {
+        //    printf("%x", (compCert+isCompressed-50)[i]);
+        //    if (i == 49) printf("\n");
+        //}
+
+
         /* may need to send rest of chain, already has leading size(s) */
         if (certSz && ssl->buffers.certChain) {
+            //printf("compCertChain is allocated\n");
+            compCertChain = XMALLOC(ssl->buffers.certChain->length, ssl->heap, DYNAMIC_TYPE_CERT);
             isCompressed = CompressCertificate(ssl, ssl->buffers.certChain->buffer,
-                                              ssl->buffers.certChain->length, compCertChain);
-            if (isCompressed < 0) printf("certSz error(compress failed)\n");
+                                              ssl->buffers.certChain->length, compCertChain, ssl->buffers.certChain->length);
+            //if (isCompressed < 0) printf("certSz error(compress failed)\n");
             certChainSz = (word32) isCompressed;
             length += certChainSz;
             listSz += certChainSz;
@@ -12956,7 +13021,7 @@ int SendCertificate(WOLFSSL* ssl)
     else {
         if (!ssl->buffers.certificate) {
             WOLFSSL_MSG("Send Cert missing certificate buffer");
-            XFREE(compCert, heap, DYNAMIC_TYPE_CERT);	//YH
+            XFREE(compCert, heap, DYNAMIC_TYPE_CERT);		//YH
             XFREE(compCertChain, heap, DYNAMIC_TYPE_CERT);	//YH
             return BUFFER_ERROR;
         }
@@ -13033,8 +13098,8 @@ int SendCertificate(WOLFSSL* ssl)
 
         /* check for available size */
         if ((ret = CheckAvailableSize(ssl, sendSz)) != 0) {
-            XFREE(compCert, heap, DYNAMIC_TYPE_CERT);
-            XFREE(compCertChain, heap, DYNAMIC_TYPE_CERT);
+            if (!ssl->buffers.certificate) XFREE(compCert, ssl->heap, DYNAMIC_TYPE_CERT);
+            if (!ssl->buffers.certChain) XFREE(compCertChain, ssl->heap, DYNAMIC_TYPE_CERT);
             return ret;
         }
         /* get output buffer */
@@ -13080,9 +13145,9 @@ int SendCertificate(WOLFSSL* ssl)
 
                 if (!IsEncryptionOn(ssl, 1)) {
                     if (ssl->certificateCompression->certCompAlgo != none) {//YH
-                        HashOutputRaw(ssl, compCert->buffer, certSz);
+                        HashOutputRaw(ssl, compCert, certSz);
                         if (certChainSz)
-                            HashOutputRaw(ssl, compCertChain->buffer,
+                            HashOutputRaw(ssl, compCertChain,
                                           certChainSz);
                     } else {
                         HashOutputRaw(ssl, ssl->buffers.certificate->buffer, certSz);
@@ -13111,7 +13176,7 @@ int SendCertificate(WOLFSSL* ssl)
             word32 copySz = min(certSz - ssl->fragOffset, fragSz);
             if (ssl->certificateCompression->certCompAlgo != none) {//YH
                 XMEMCPY(output + i,
-                        compCert->buffer + ssl->fragOffset, copySz);
+                        compCert + ssl->fragOffset, copySz);
             } else {
                 XMEMCPY(output + i,
                         ssl->buffers.certificate->buffer + ssl->fragOffset, copySz);
@@ -13125,7 +13190,7 @@ int SendCertificate(WOLFSSL* ssl)
             word32 copySz = min(certChainSz + certSz - ssl->fragOffset, fragSz);
             if (ssl->certificateCompression->certCompAlgo != none) {//YH
                 XMEMCPY(output + i,
-                        compCertChain->buffer + ssl->fragOffset - certSz,
+                        compCertChain + ssl->fragOffset - certSz,
                         copySz);
             } else {
                 XMEMCPY(output + i,
@@ -13138,8 +13203,8 @@ int SendCertificate(WOLFSSL* ssl)
         }
 
         /* CompressedCert Free */        
-        XFREE(compCert, heap, DYNAMIC_TYPE_CERT);
-        XFREE(compCertChain, heap, DYNAMIC_TYPE_CERT);
+        if (!ssl->buffers.certificate) XFREE(compCert, ssl->heap, DYNAMIC_TYPE_CERT);
+        if (!ssl->buffers.certChain) XFREE(compCertChain, ssl->heap, DYNAMIC_TYPE_CERT);
 
         if (IsEncryptionOn(ssl, 1)) {
             byte* input = NULL;
@@ -16353,7 +16418,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
         int                ret;
         word16             extSz = 0;
 
-        printf("----------SendClientHello invoked!-----------\n");//YH
+        //printf("----------SendClientHello invoked!-----------\n");//YH
 #ifdef WOLFSSL_TLS13
         if (IsAtLeastTLSv1_3(ssl->version))
             return SendTls13ClientHello(ssl);
@@ -16387,14 +16452,14 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
         /* auto populate extensions supported unless user defined */
         if ((ret = TLSX_PopulateExtensions(ssl, 0)) != 0)
             return ret;
-        printf("TLSX_PopulateExtensions succesfully invoked in SendClientHello\n");//YH
+        //printf("TLSX_PopulateExtensions succesfully invoked in SendClientHello\n");//YH
     #ifdef HAVE_QSH
         if (QSH_Init(ssl) != 0)
             return MEMORY_E;
     #endif
-        printf("Before TLSX_GetRequestSize invoked in SendClientHello(extSz:%d)\n", extSz);//YH
+        //printf("Before TLSX_GetRequestSize invoked in SendClientHello(extSz:%d)\n", extSz);//YH
         extSz = TLSX_GetRequestSize(ssl, client_hello);
-        printf("After TLSX_GetRequestSize invoked in SendClientHello(extSz:%d)\n", extSz);//YH
+        //printf("After TLSX_GetRequestSize invoked in SendClientHello(extSz:%d)\n", extSz);//YH
         if (extSz != 0)
             length += extSz;
     /*
@@ -16491,10 +16556,10 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
             output[idx++] = ZLIB_COMPRESSION;
         else
             output[idx++] = NO_COMPRESSION;
-        printf("Before TLSX_WriteRequest(in SendClientHello)\n");//YH
+        //printf("Before TLSX_WriteRequest(in SendClientHello)\n");//YH
 #ifdef HAVE_TLS_EXTENSIONS
         idx += TLSX_WriteRequest(ssl, output + idx, client_hello);
-        printf("After TLSX_WriteRequest(in SendClientHello)\n");//YH
+        //printf("After TLSX_WriteRequest(in SendClientHello)\n");//YH
         
         (void)idx; /* suppress analyzer warning, keep idx current */
 #else
@@ -16574,7 +16639,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
 
         ssl->buffers.outputBuffer.length += sendSz;
         
-        printf("---------------SendClientHello Finished!!--------------\n");
+        //printf("---------------SendClientHello Finished!!--------------\n");
         return SendBuffered(ssl);
     }
 
@@ -16735,7 +16800,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
         word32          begin = i;
         int             ret;
  
-        printf("----Processing Server Hello(DoServerHello)----\n");//YH
+        //printf("----Processing Server Hello(DoServerHello)----\n");//YH
 
 #ifdef WOLFSSL_CALLBACKS
         if (ssl->hsInfoOn) AddPacketName("ServerHello", &ssl->handShakeInfo);
@@ -16982,7 +17047,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
                 DtlsMsgPoolReset(ssl);
             }
         #endif
-	printf("------------DoClientHello Finished!------------\n");
+	//printf("------------DoClientHello Finished!------------\n");
 
         return SetCipherSpecs(ssl);
     }
@@ -20241,7 +20306,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                + SUITE_LEN
                + ENUM_LEN;
         
-        printf("-------------SendServerHello invoked!------------\n");//YH 
+        //printf("-------------SendServerHello invoked!------------\n");//YH 
 
 #ifdef HAVE_TLS_EXTENSIONS
         length += TLSX_GetResponseSize(ssl, server_hello);
@@ -20414,7 +20479,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
 
         ssl->options.serverState = SERVER_HELLO_COMPLETE;
 
-        printf("---------------SendServerHello Finished!!--------------\n");
+        //printf("---------------SendServerHello Finished!!--------------\n");
         if (ssl->options.groupMessages)
             return 0;
         else
@@ -22363,7 +22428,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
     int DoClientHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                              word32 helloSz)
     {
-	printf("------------Processing Client Hello(DoClientHello)------------\n");
+	//printf("------------Processing Client Hello(DoClientHello)------------\n");
         byte            b;
         byte            bogusID = 0;   /* flag for a bogus session id */
         ProtocolVersion pv;
@@ -22835,7 +22900,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                 return ret;
             }
         }
-	printf("------------DoClientHello Finished!------------\n");
+	//printf("------------DoClientHello Finished!------------\n");
         return MatchSuite(ssl, &clSuites);
     }
 

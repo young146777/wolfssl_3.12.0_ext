@@ -178,10 +178,12 @@
 #ifdef HAVE_CCLIBZ
     #include "zlib.h"
 #endif
+/*
 #ifdef HAVE_CCBROTLI
-    #include "brotli.h"
+    #include <brotli/encode.h>
+    #include <brotli/decode.h>
 #endif
-
+*/
 #ifdef WOLFSSL_ASYNC_CRYPT
     #include <wolfssl/wolfcrypt/async.h>
 #endif
@@ -2555,18 +2557,12 @@ enum CertificateCompressionAlgorithm {
     none
 };
 
-typedef struct CompressedCertificate {
-    word32 length;		//size of compressed certificate
-    byte* buffer;	//compressed certificate
-} CompressedCert;
-
-
 void InitCertificateCompression(CertificateCompression* cc);
 const byte const* GetCertCompList(void);
 int GetCertCompListSize(void);
 int cc_pick_method(int priority);
-int CompressCertificate(WOLFSSL* ssl, byte* inbuffer, int buffSz, CompressedCert* compCert);
-int DeCompressCertificate(WOLFSSL* ssl, byte* inbuffer, int buffSz, byte* outbuffer);
+int CompressCertificate(WOLFSSL* ssl, byte* inbuffer, int inSz, byte* outbuffer, int outSz);
+int DeCompressCertificate(WOLFSSL* ssl, byte* inbuffer, int inSz, byte* outbuffer, int outSz);
 
 
 
