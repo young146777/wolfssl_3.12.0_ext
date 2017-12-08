@@ -8,7 +8,7 @@ BIN=$(SERV) $(CLNT)
 OBJ=server.o client.o
 
 SERV_NAME=127.0.0.1
-SERV_PORT=9999
+SERV_PORT=443
 
 CA_CERT=ca.pem
 SERV_CERT=serv_cert.crt
@@ -17,10 +17,10 @@ CLNT_CERT=clnt_cert.crt
 CLNT_PRIV=clnt_priv.key
 
 CA_ECC_CERT=ecc/ca.crt
-SERV_ECC_CERT=ecc/ecc_server.crt
-SERV_ECC_PRIV=ecc/ecc_server.key
-CLNT_ECC_CERT=ecc/ecc_client.crt
-CLNT_ECC_PRIV=ecc/ecc_client.key
+SERV_ECC_CERT=ecc/ssl_server.crt
+SERV_ECC_PRIV=ecc/ssl_server.key
+CLNT_ECC_CERT=ecc/ssl_client.crt
+CLNT_ECC_PRIV=ecc/ssl_client.key
 
 all: server client
 
