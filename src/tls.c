@@ -4769,6 +4769,7 @@ int cc_pick_method(int priority) {
     if (priority >= GetCertCompListSize() || priority < 0) {
         return 0;
     }
+    printf("certcompsize : %d, cclist[0]: %d\n", GetCertCompListSize(), cclist[0]);
     return (byte) cclist[priority];
 }
 
