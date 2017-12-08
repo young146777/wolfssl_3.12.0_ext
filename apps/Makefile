@@ -16,6 +16,12 @@ SERV_PRIV=serv_priv.key
 CLNT_CERT=clnt_cert.crt
 CLNT_PRIV=clnt_priv.key
 
+CA_ECC_CERT=ecc/ca.crt
+SERV_ECC_CERT=ecc/ecc_server.crt
+SERV_ECC_PRIV=ecc/ecc_server.key
+CLNT_ECC_CERT=ecc/ecc_client.crt
+CLNT_ECC_PRIV=ecc/ecc_client.key
+
 all: server client
 
 server: server.o
@@ -33,6 +39,10 @@ client.o: client.c
 server_test: server
 	echo "server run source for test"	
 	./$(SERV) $(SERV_PORT) $(SERV_CERT) $(SERV_PRIV) $(CA_CERT)
+
+server_ecc: server
+	echo "server with ecc cert"
+	./$(SERV) $(SERV_PORT) $(SERV_ECC_CERT) $(SERV_ECC_PRIV) $(CA_ECC_CERT)
 
 client_test: client
 	echo "client run source for test"	
