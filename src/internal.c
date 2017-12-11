@@ -7889,7 +7889,7 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                     InitStreams(ssl);
                     //if (result != 0) printf("InitStreams failed\n");
                     int deCertSz = -1; //decompressed cert size
-//                    printf("listSz: %d\n", listSz);
+                    //printf("listSz: %d\n", listSz);
 //                    printf("Before decompression\n");
 //                    printf("first(recv) : ");
 //                    for (int i = 0; i < 50; i++) {
@@ -7904,7 +7904,7 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                     byte* outbuf = XMALLOC(2*certSz, ssl->heap, DYNAMIC_TYPE_CERT);
                     deCertSz = DeCompressCertificate(ssl, input + args->idx, certSz, 
                                                      outbuf, 2*certSz);
-//                    printf("certificate length(recv)(before: %d, after: %d)\n",certSz, deCertSz);
+                    //printf("certificate length(recv)(before: %d, after: %d)\n",certSz, deCertSz);
 //                    
 //                    if (deCertSz < 0) printf("decompression failed\n");
                     args->certs[args->totalCerts].length = deCertSz;
@@ -7920,7 +7920,7 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
 //                        printf("%x", (args->certs[args->totalCerts].buffer+deCertSz-50)[i]);
 //                        if (i == 49) printf("\n");
 //                    }
-                    XFREE(outbuf, ssl->heap, DYNAMIC_TYPE_CERT);
+//                    XFREE(outbuf, ssl->heap, DYNAMIC_TYPE_CERT);
                     FreeStreams(ssl);
                     
                 } else {
@@ -16463,6 +16463,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
                + COMP_LEN + ENUM_LEN;
 
 #ifdef HAVE_TLS_EXTENSIONS
+        printf("HAVE_TLS_EXTENSIONS\n");
         /* auto populate extensions supported unless user defined */
         if ((ret = TLSX_PopulateExtensions(ssl, 0)) != 0)
             return ret;
