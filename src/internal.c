@@ -16463,7 +16463,7 @@ void PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
                + COMP_LEN + ENUM_LEN;
 
 #ifdef HAVE_TLS_EXTENSIONS
-        printf("HAVE_TLS_EXTENSIONS\n");
+        //printf("HAVE_TLS_EXTENSIONS\n");
         /* auto populate extensions supported unless user defined */
         if ((ret = TLSX_PopulateExtensions(ssl, 0)) != 0)
             return ret;
