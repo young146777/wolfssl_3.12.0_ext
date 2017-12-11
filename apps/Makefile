@@ -48,5 +48,9 @@ client_test: client
 	echo "client run source for test"	
 	./$(CLNT) $(SERV_NAME) $(SERV_PORT) $(CLNT_CERT) $(CLNT_PRIV) $(CA_CERT)
 
+client_ecc: client
+	echo "client with ecc cert"
+	./$(CLNT) $(SERV_NAME) $(SERV_PORT) $(CLNT_ECC_CERT) $(CLNT_ECC_PRIV) $(CA_ECC_CERT)
+
 clean:
 	$(RM) $(BIN) $(OBJ)
