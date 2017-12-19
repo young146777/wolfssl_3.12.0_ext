@@ -163,7 +163,7 @@
 #endif
 
 #define HAVE_CERTIFICATE_COMPRESSION  /* YH */
-//#define HAVE_CCBROTLI
+#define HAVE_CCBROTLI
 #define HAVE_CCLIBZ
 
 /* make sure old RNG name is used with CTaoCrypt FIPS */
@@ -584,7 +584,7 @@ extern void uITRON4_free(void *p) ;
     #define USER_TIME
     #define HAVE_ECC
     #define HAVE_ALPN
-    #define HAVE_TLS_EXTENSIONS
+    //#define HAVE_TLS_EXTENSIONS
     #define HAVE_AESGCM
     #define HAVE_SUPPORTED_CURVES
     #define ALT_ECC_SIZE

@@ -1,7 +1,7 @@
 CC=gcc
 LD=gcc
 CFLAGS=-I/usr/local/include -Wcpp
-LDFLAGS=-L/usr/local/lib -lwolfssl -lm -lz
+LDFLAGS=-L/usr/local/lib -lwolfssl -lm -lz -lbrotlienc -lbrotlidec
 SERV=server
 CLNT=client
 BIN=$(SERV) $(CLNT)
@@ -15,12 +15,6 @@ SERV_CERT=serv_cert.crt
 SERV_PRIV=serv_priv.key
 CLNT_CERT=clnt_cert.crt
 CLNT_PRIV=clnt_priv.key
-
-CA_ECC_CERT=ecc/ca.crt
-SERV_ECC_CERT=ecc/ssl_server.crt
-SERV_ECC_PRIV=ecc/ssl_server.key
-CLNT_ECC_CERT=ecc/ssl_client.crt
-CLNT_ECC_PRIV=ecc/ssl_client.key
 
 all: server client
 
@@ -39,10 +33,6 @@ client.o: client.c
 server_test: server
 	echo "server run source for test"	
 	./$(SERV) $(SERV_PORT) $(SERV_CERT) $(SERV_PRIV) $(CA_CERT)
-
-server_ecc: server
-	echo "server with ecc cert"
-	./$(SERV) $(SERV_PORT) $(SERV_ECC_CERT) $(SERV_ECC_PRIV) $(CA_ECC_CERT)
 
 client_test: client
 	echo "client run source for test"	

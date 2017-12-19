@@ -41,18 +41,18 @@
 #endif
 
 #ifdef HAVE_LIBZ
-    #include "zlib.h"
+    #include <zlib.h>
 #endif
 
 #ifdef HAVE_CCLIBZ
-    #include "zlib.h"
+    #include <zlib.h>
 #endif
-/*
+
 #ifdef HAVE_CCBROTLI
     #include <brotli/encode.h>
     #include <brotli/decode.h>
 #endif
-*/
+
 #ifdef HAVE_NTRU
     #include "libntruencrypt/ntru_crypto.h"
 #endif
@@ -470,6 +470,89 @@ static INLINE void ato32(const byte* c, word32* u32)
     }
 
 #endif /* HAVE_LIBZ */
+
+
+#ifdef HAVE_CCBROTLI
+    #define DEFAULT_QUALITY 11
+    #define DEFAULT_LGWIN 22
+    typedef struct {
+        /* Parameters */
+        int quality;
+        int lgwin;
+      
+        /* Inner state */
+        uint8_t* input;
+        size_t inputSz;
+        uint8_t* output;
+        size_t outputSz;
+        size_t total_out;
+    } BrotliContext;
+
+    static void InitBrotliContext(BrotliContext* context, uint8_t* in, size_t inSz, uint8_t* out, size_t outSz) {
+        context->quality = DEFAULT_QUALITY;
+        context->lgwin = DEFAULT_LGWIN;
+        context->input = in;
+        context->inputSz = inSz;
+        context->output = out;
+        context->outputSz = outSz;
+        context->total_out = -1;
+    }    
+
+    static void FreeBrotliContext(BrotliContext* context) {
+        free(context);
+    } 
+    static BROTLI_BOOL brotliCompress(BrotliContext* context) {
+        size_t available_in = context->inputSz;
+        const uint8_t* next_in = context->input;
+        size_t available_out = context->outputSz;
+        uint8_t* next_out = context->output;
+        BrotliEncoderState* s = BrotliEncoderCreateInstance(NULL, NULL, NULL);
+        if (!s) {
+            //printf("BrotliEncoder out of memory");
+            return BROTLI_FALSE;
+        }
+        BrotliEncoderSetParameter(s, BROTLI_PARAM_QUALITY, (uint32_t)context->quality);
+        BrotliEncoderSetParameter(s, BROTLI_PARAM_LGWIN, (uint32_t)context->lgwin);
+        
+        if (!BrotliEncoderCompressStream(s, BROTLI_OPERATION_FINISH,
+            &available_in, &next_in, &available_out, &next_out, &(context->total_out))) {
+            /* Should detect OOM? */
+            //printf("BrotliEncoderCompressStream error\n");
+            return BROTLI_FALSE;
+        }
+
+        if (BrotliEncoderIsFinished(s)) {
+            //printf("Brotli compression successfully finished!\n");
+            return BROTLI_TRUE;
+        }
+        return BROTLI_FALSE;
+    }
+    
+    static BROTLI_BOOL brotliDecompress(BrotliContext* context) {
+        size_t available_in = context->inputSz;
+        const uint8_t* next_in = context->input;
+        size_t available_out = context->outputSz;
+        uint8_t* next_out = context->output;
+        BrotliDecoderResult result = BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT;
+        BrotliDecoderState* s = BrotliDecoderCreateInstance(NULL, NULL, NULL);
+        if (!s) {
+            //printf("BrotliEncoder out of memory");
+            return BROTLI_FALSE;
+        }
+        
+        result = BrotliDecoderDecompressStream(
+        s, &available_in, &next_in, &available_out, &next_out, &(context->total_out));
+        
+        if (result == BROTLI_DECODER_RESULT_SUCCESS) {
+            //printf("Brotli decompression successfully finished!\n");
+            return BROTLI_TRUE;
+        } else {
+            //printf("corrupt input in brotliDecompress\n");
+            return BROTLI_FALSE;
+        }
+    }
+    
+#endif
 
 
 #ifdef WOLFSSL_SESSION_EXPORT
@@ -1765,15 +1848,15 @@ void InitCertificateCompression(CertificateCompression* cc) {//YH
     //printf("InitCertificateCompression invoked!\n");//YH
     int idx = 0;
     
-    #ifdef HAVE_CCLIBZ	//YH TODO: we need to define it.
-    printf("(zlib inserted in certCompAlgoList)\n");//YH
-    cc->certCompAlgoList[idx++] = zlib;
-    #endif
     #ifdef HAVE_CCBROTLI
-    printf("(brotli inserted in certCompAlgoList)\n");//YH
+    //printf("(brotli inserted in certCompAlgoList)\n");//YH
     cc->certCompAlgoList[idx++] = brotli;
     #endif
-    printf("(none inserted in certCompAlgoList)\n");//YH
+    #ifdef HAVE_CCLIBZ	//YH TODO: we need to define it.
+    //printf("(zlib inserted in certCompAlgoList)\n");//YH
+    cc->certCompAlgoList[idx++] = zlib;
+    #endif
+    //printf("(none inserted in certCompAlgoList)\n");//YH
     cc->certCompAlgoList[idx++] = none;
     cc->certCompAlgoSz = (word16)idx;
     cc->certCompAlgo = -1; //0 : default(zlib)
@@ -1782,11 +1865,11 @@ void InitCertificateCompression(CertificateCompression* cc) {//YH
 
 static const byte const certcomp[] =
 {
-#ifdef HAVE_CCLIBZ
-    zlib,
-#endif
 #ifdef HAVE_CCBROTLI
     brotli,
+#endif
+#ifdef HAVE_CCLIBZ
+    zlib,
 #endif
     none,
 };
@@ -7904,7 +7987,7 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                     byte* outbuf = XMALLOC(2*certSz, ssl->heap, DYNAMIC_TYPE_CERT);
                     deCertSz = DeCompressCertificate(ssl, input + args->idx, certSz, 
                                                      outbuf, 2*certSz);
-                    //printf("certificate length(recv)(before: %d, after: %d)\n",certSz, deCertSz);
+//                    printf("certificate length(recv)(before: %d, after: %d)\n",certSz, deCertSz);
 //                    
 //                    if (deCertSz < 0) printf("decompression failed\n");
                     args->certs[args->totalCerts].length = deCertSz;
@@ -7920,7 +8003,7 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
 //                        printf("%x", (args->certs[args->totalCerts].buffer+deCertSz-50)[i]);
 //                        if (i == 49) printf("\n");
 //                    }
-//                    XFREE(outbuf, ssl->heap, DYNAMIC_TYPE_CERT);
+//                    //XFREE(outbuf, ssl->heap, DYNAMIC_TYPE_CERT);
                     FreeStreams(ssl);
                     
                 } else {
@@ -12879,6 +12962,10 @@ int CompressCertificate(WOLFSSL* ssl, byte* inbuffer, int inSz, byte* outbuffer,
     CertificateCompression* cc = ssl->certificateCompression;
     byte method = cc->certCompAlgo;
     int dataSz = -1;
+    int result = 0;
+    #ifdef HAVE_CCBROTLI
+    BrotliContext* context = NULL;
+    #endif
     if (inSz < 0) {
         //printf("zlib compression failed!\n");
         return -1;
@@ -12889,10 +12976,20 @@ int CompressCertificate(WOLFSSL* ssl, byte* inbuffer, int inSz, byte* outbuffer,
             //printf("zlib compression invoked!(inputbufSz:%d, outputbufSz:%d)\n", inSz, outSz);
             dataSz = myCompress(ssl, inbuffer, inSz, outbuffer, outSz);
             break;
+        #ifdef HAVE_CCBROTLI
         case brotli:
             //brotli compression
             //printf("brotli compression invoked!\n");
+            context = malloc(sizeof(BrotliContext));
+            InitBrotliContext(context, (uint8_t*)inbuffer, (size_t)inSz, (uint8_t*)outbuffer, (size_t)outSz);
+            //printf("Init success(%u==%u, %u==%u)\n", inSz, (unsigned int)(context->inputSz), outSz, (unsigned int)(context->outputSz));
+            result = brotliCompress(context);
+            //printf("compress finish\n");
+            if (result == 0) result = 0;//useless value
+            dataSz = context->total_out;
+            FreeBrotliContext(context);
             break;
+        #endif
         default:
             //printf("CompressCertificate Failed!(method : %d)\n", method);
             break;   
@@ -12906,6 +13003,10 @@ int DeCompressCertificate(WOLFSSL* ssl, byte* inbuffer, int inSz, byte* outbuffe
     CertificateCompression* cc = ssl->certificateCompression;
     byte method = cc->certCompAlgo;
     int dataSz = -1;
+    int result = 0;
+    #ifdef HAVE_CCBROTLI
+    BrotliContext* context = NULL;
+    #endif
     if (inSz < 0) {
         //printf("zlib compression failed!\n");
         return -1;
@@ -12916,10 +13017,18 @@ int DeCompressCertificate(WOLFSSL* ssl, byte* inbuffer, int inSz, byte* outbuffe
             //printf("zlib decompression invoked!\n");
             dataSz = myDeCompress(ssl, inbuffer, inSz, outbuffer, outSz);
             break;
+        #ifdef HAVE_CCBROTLI
         case brotli:
             //brotli compression
             //printf("brotli decompression invoked!\n");
+            context = malloc(sizeof(BrotliContext));
+            InitBrotliContext(context, (uint8_t*)inbuffer, inSz, (uint8_t*)outbuffer, outSz);
+            result = brotliDecompress(context);
+            if (result == 0) result = 0;//useless value
+            dataSz = context->total_out;
+            FreeBrotliContext(context);
             break;
+        #endif
         default:
             //printf("DeCompressCertificate Failed!(method : %d)\n", method);
             break;
@@ -12949,8 +13058,12 @@ int SendCertificate(WOLFSSL* ssl)
     } 
     /* YH Initialize zlib stream */
     if (ssl->certificateCompression->certCompAlgo != none) {
-        InitStreams(ssl);
-        //if (result != 0) //printf("InitStreams failed\n");
+        if (ssl->certificateCompression->certCompAlgo == zlib) {
+            InitStreams(ssl);
+            //if (result != 0) //printf("InitStreams failed\n");
+        } else if (ssl->certificateCompression->certCompAlgo == brotli) {
+            
+        }
     }
 
     if (ssl->options.usingPSK_cipher || ssl->options.usingAnon_cipher) {
@@ -12965,7 +13078,7 @@ int SendCertificate(WOLFSSL* ssl)
         listSz = 0;
     }
     else if (ssl->certificateCompression->certCompAlgo != none) {
-        printf("Certificate Compression will be operated.\n");
+        //printf("Certificate Compression will be operated.\n");
         if (!ssl->buffers.certificate) {
             WOLFSSL_MSG("Send Cert missing certificate buffer");
             return BUFFER_ERROR;
@@ -12973,38 +13086,38 @@ int SendCertificate(WOLFSSL* ssl)
         compCert = XMALLOC(ssl->buffers.certificate->length,    ssl->heap, DYNAMIC_TYPE_CERT);
         //printf("compCert is allocated\n");
         
-        //printf("Before compression\n");
-        //printf("first(Send) : ");
-        //for (int i = 0; i < 50; i++) {
-        //    printf("%x", ssl->buffers.certificate->buffer[i]);
-        //    if (i == 49) printf("\n");
-        //}
-        //printf("last(Send) : ");
-        //for (int i = 0; i < 50; i++) {
-        //    printf("%x", (ssl->buffers.certificate->buffer+ssl->buffers.certificate->length-50)[i]);
-        //    if (i == 49) printf("\n");
-        //}
+//        printf("Before compression\n");
+//        printf("first(Send) : ");
+//        for (int i = 0; i < 50; i++) {
+//            printf("%x", ssl->buffers.certificate->buffer[i]);
+//            if (i == 49) printf("\n");
+//        }
+//        printf("last(Send) : ");
+//        for (int i = 0; i < 50; i++) {
+//            printf("%x", (ssl->buffers.certificate->buffer+ssl->buffers.certificate->length-50)[i]);
+//            if (i == 49) printf("\n");
+//        }
         int isCompressed = CompressCertificate(ssl, ssl->buffers.certificate->buffer, 
                        ssl->buffers.certificate->length, compCert, ssl->buffers.certificate->length);
-        //printf("certificate length(send)(before: %d, after: %d)\n",ssl->buffers.certificate->length, isCompressed);
-        //if (isCompressed < 0) printf("certSz error(compress failed)\n");
+//        printf("certificate length(send)(before: %d, after: %d)\n",ssl->buffers.certificate->length, isCompressed);
+//        if (isCompressed < 0) printf("certSz error(compress failed)\n");
         certSz = (word32) isCompressed;
         headerSz = 2 * CERT_HEADER_SZ;
         /* list + cert size */
         length = certSz + headerSz;
         listSz = certSz + CERT_HEADER_SZ;
 
-        //printf("After compression\n");
-        //printf("first(Send) : ");
-        //for (int i = 0; i < 50; i++) {
-        //    printf("%x", compCert[i]);
-        //    if (i == 49) printf("\n");
-        //}
-        //printf("last(Send) : ");
-        //for (int i = 0; i < 50; i++) {
-        //    printf("%x", (compCert+isCompressed-50)[i]);
-        //    if (i == 49) printf("\n");
-        //}
+//        printf("After compression\n");
+//        printf("first(Send) : ");
+//        for (int i = 0; i < 50; i++) {
+//            printf("%x", compCert[i]);
+//            if (i == 49) printf("\n");
+//        }
+//        printf("last(Send) : ");
+//        for (int i = 0; i < 50; i++) {
+//            printf("%x", (compCert+isCompressed-50)[i]);
+//            if (i == 49) printf("\n");
+//        }
 
 
         /* may need to send rest of chain, already has leading size(s) */

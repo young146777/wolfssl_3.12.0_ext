@@ -171,19 +171,19 @@
 
 
 #ifdef HAVE_LIBZ
-    #include "zlib.h"
+    #include <zlib.h>
 #endif
 
 /* YH */
 #ifdef HAVE_CCLIBZ
-    #include "zlib.h"
+    #include <zlib.h>
 #endif
-/*
+
 #ifdef HAVE_CCBROTLI
     #include <brotli/encode.h>
     #include <brotli/decode.h>
 #endif
-*/
+
 #ifdef WOLFSSL_ASYNC_CRYPT
     #include <wolfssl/wolfcrypt/async.h>
 #endif
