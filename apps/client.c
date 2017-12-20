@@ -19,6 +19,14 @@
 
 #define FAIL    -1
 
+unsigned long get_current_microseconds()
+{
+    struct timeval curr;
+    gettimeofday(&curr, NULL);
+
+    return curr.tv_sec * 1000000 + curr.tv_usec;
+}
+
 int OpenConnection(const char *hostname, char *port)
 {  
 	int sd;
@@ -146,12 +154,17 @@ int main(int count, char *strings[])
 	wolfSSL_set_fd(ssl, server);    /* attach the socket descriptor */
 
 	int result, err;
+	unsigned long start, end;
+	start = get_current_microseconds();
 	if ((result=wolfSSL_connect(ssl)) == FAIL ) {  /* perform the connection */
 		err=wolfSSL_get_error(ssl, result);
 		printf("wolfSSL_connect failed: %d\n", err);
 	}
 	else
-		printf("wolfSSL_connect success\n");
+	{
+		end = get_current_microseconds();
+		printf("wolfSSL_connect success: %ld\n", end - start);
+	}
 
 	close(server);         /* close socket */
 	wolfSSL_CTX_free(ctx);        /* release context */
