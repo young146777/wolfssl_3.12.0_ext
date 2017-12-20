@@ -125,7 +125,7 @@ void LoadCertificates(WOLFSSL_CTX* ctx, char* CertFile, char* KeyFile, char* CaF
 	}
 
 	/*force the client-side have a certificate*/
-	wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+//	wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
 }
 
 void ShowCerts(WOLFSSL* ssl)
