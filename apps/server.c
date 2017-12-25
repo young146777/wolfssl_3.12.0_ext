@@ -190,7 +190,10 @@ int main(int count, char *strings[])
 			printf("wolfSSL_accept failed with errno: %d\n", err);
 		}
 		else
-			printf("wolfSSL_accept success\n");
+		{
+			end = get_current_microseconds();
+			printf("wolfSSL_accept success: %ld\n", end - start);
+		}
 
 		close(client);
 	}
