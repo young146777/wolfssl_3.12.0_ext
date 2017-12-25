@@ -1,8 +1,8 @@
 CC=gcc
 LD=gcc
 CFLAGS=-I/home/hwlee/wolfssl-comp-lib/include -Wcpp
-LDFLAGS=-L/home/hwlee/wolfssl-comp-lib/lib -lwolfssl -lm -lz 
-ORIG_CFLAGS=-I/home/hwlee/wolfssl-comp-lib/include -Wcpp
+LDFLAGS=-L/home/hwlee/wolfssl-comp-lib/lib -lwolfssl -L/home/hwlee/wolfssl-comp-lib/lib -lbrotlienc -lbrotlidec -lm -lz
+ORIG_CFLAGS=-I/usr/local/include -Wcpp
 ORIG_LDFLAGS=-L/usr/local/lib -lwolfssl -lm -lz 
 
 SERV=server
@@ -10,13 +10,13 @@ CLNT=client
 BIN=$(SERV) $(CLNT)
 OBJ=server.o client.o
 
-SERV_NAME=127.0.0.1
+SERV_NAME=164.107.119.65
 SERV_PORT=443
 
 CA_CERT=ca.pem
-SERV_CERT=serv_cert.crt
+SERV_CERT=serv_cert.pem
 SERV_PRIV=serv_priv.key
-CLNT_CERT=clnt_cert.crt
+CLNT_CERT=clnt_cert.pem
 CLNT_PRIV=clnt_priv.key
 
 SERV_CERT_2048=server_2048.pem
@@ -51,10 +51,10 @@ client_orig: client.o
 	$(LD) -o client client.o $(ORIG_LDFLAGS)
 
 server.o: server.c
-	$(CC) -c $<
+	$(CC) $(CFLAGS) -c $<
 
 client.o: client.c
-	$(CC) -c $<
+	$(CC) $(CFLAGS) -c $<
 
 server_test: server
 	echo "server run source for test"	
