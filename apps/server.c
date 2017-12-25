@@ -19,14 +19,6 @@
 
 int server;
 
-unsigned long get_current_microseconds()
-{
-    struct timeval curr;
-    gettimeofday(&curr, NULL);
-
-    return curr.tv_sec * 1000000 + curr.tv_usec;
-}
-
 static INLINE void SetDH(WOLFSSL* ssl) 
 {
 	/* dh1024 p */
@@ -185,7 +177,6 @@ int main(int count, char *strings[])
 
 	while(1)
 	{
-		unsigned long start, end;
 		int client = accept(server, (struct sockaddr*)&addr, &len);  /* accept connection as usual */
 		inet_ntop(AF_INET, &(addr.sin_addr), str, INET_ADDRSTRLEN);
 		printf("Connecting from: %s\nPort: %d\n",str, ntohs(addr.sin_port));
@@ -194,7 +185,6 @@ int main(int count, char *strings[])
 		SetDH(ssl);
 
 		int result, err;
-		start = get_current_microseconds();
 		if ( (result=wolfSSL_accept(ssl)) == FAIL ) {    /* do SSL-protocol accept */
 			err=wolfSSL_get_error(ssl, result);
 			printf("wolfSSL_accept failed with errno: %d\n", err);
