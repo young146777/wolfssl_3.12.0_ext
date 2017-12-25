@@ -14,10 +14,20 @@
 #include <math.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <time.h>
+#include <sys/time.h>
 
 #define FAIL    -1
 
 int server;
+
+unsigned long get_current_microseconds()
+{
+	struct timeval curr;
+	gettimeofday(&curr, NULL);
+
+	return curr.tv_sec * 1000000 + curr.tv_usec;
+}
 
 static INLINE void SetDH(WOLFSSL* ssl) 
 {
@@ -148,6 +158,11 @@ void ShowCerts(WOLFSSL* ssl)
 		printf("No certificates.\n");
 }
 
+void print_log(const int logLevel, const char *const logMessage)
+{
+	printf("%s\n", logMessage);
+}
+
 int main(int count, char *strings[])
 {  
 	wolfSSL_Init();
@@ -160,6 +175,8 @@ int main(int count, char *strings[])
 		exit(1);
 	}
 	wolfSSL_library_init();
+	wolfSSL_Debugging_ON();
+	wolfSSL_SetLoggingCb(print_log);
 
 	portnum = strings[1];
 	cert = strings[2];
@@ -174,6 +191,7 @@ int main(int count, char *strings[])
 	char str[INET_ADDRSTRLEN];
 	socklen_t len = sizeof(addr);
 	WOLFSSL *ssl;
+	unsigned long start, end;
 
 	while(1)
 	{
@@ -185,6 +203,7 @@ int main(int count, char *strings[])
 		SetDH(ssl);
 
 		int result, err;
+		start = get_current_microseconds();
 		if ( (result=wolfSSL_accept(ssl)) == FAIL ) {    /* do SSL-protocol accept */
 			err=wolfSSL_get_error(ssl, result);
 			printf("wolfSSL_accept failed with errno: %d\n", err);
@@ -192,7 +211,7 @@ int main(int count, char *strings[])
 		else
 		{
 			end = get_current_microseconds();
-			printf("wolfSSL_accept success: %ld\n", end - start);
+			printf("wolfSSL_accept success: %ld us\n", end - start);
 		}
 
 		close(client);
