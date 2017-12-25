@@ -201,7 +201,7 @@ int main(int count, char *strings[])
 		}
 		else
 		{
-			end = get_current_microseconds()'
+			end = get_current_microseconds();
 			printf("wolfSSL_accept success: %ld\n", end - start);
 		}
 
